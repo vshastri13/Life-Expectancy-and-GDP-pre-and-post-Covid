@@ -1,0 +1,507 @@
+---
+title: "MiniProject(EDA)"
+author: "Vaishnavi Shastri"
+date: "2024-02-19"
+output: html_document
+---
+
+#Loading the required data:
+
+```{r}
+countries_data <- read.csv("/Users/vaishnavishastri/Desktop/EDA/Miniproject/data/countries.csv")
+World_Bank_gdp <- read.csv("/Users/vaishnavishastri/Desktop/EDA/Miniproject/data/worldbank-gdp.csv")
+World_Bank_life <- read.csv("/Users/vaishnavishastri/Desktop/EDA/Miniproject/data/worldbank-life.csv")
+```
+
+##Question 1 
+GDP and life expectancy in 2021: How does life expectancy vary with GDP per capita
+in 2021? Can the trends be well-described by a simple model such as a linear model, or is a
+more complicated model required? Is the pattern the same or different for every continent?
+If some continents are different, which ones, and how is the relationship different in those
+continents?
+
+
+#refining the data as per requirement:
+```{r}
+library(tidytable)
+dfmin1 <- data.frame(
+  name = World_Bank_gdp$Country.Name,
+  Life_expectancy = World_Bank_life$X2021,
+  GDP = World_Bank_gdp$X2021
+)
+
+dfmin1 <- left_join(dfmin1, countries_data, by = "name")
+
+dfmin1 <- na.omit(dfmin1)
+
+```
+
+#Plotting the graph of Life Expectancy vs GDP per capita with lm, loess, gam models and faceted by continent
+
+```{r}
+options(scipen = 999)
+ggplot(dfmin1, aes(x = GDP, y = Life_expectancy)) + 
+  geom_point() + 
+  scale_x_log10() +
+  ggtitle("Life Expectancy vs GDP per capita") +
+  xlab("GDP per Capita") +
+  ylab("Life Expectancy") +
+  geom_smooth(aes(color = "Linear Model", linetype = "Linear Model"), method = "lm", se = FALSE, color = "blue") +  
+  geom_smooth(aes(color = "Loess", linetype = "Loess"), method = "loess", span = 0.9, se = FALSE, color = "red") +
+  geom_smooth(aes(color = "GAM", linetype = "GAM"), method = "gam", se = FALSE, color = "purple") + 
+  facet_wrap(~continent, labeller = label_both, nrow = 2) +
+  theme(axis.title.x.bottom = element_text(size = 13), axis.title.y.left = element_text(size = 13),
+        legend.key.width = unit(0.75, "cm"))
+
+```
+Here, the graph represents the relationship between life expectancy and GDP per capita. There are faceted by the continent. The linear models like lm (simple linear model), loess and GAM are applied on the graph. since Europe and and Oceania shows some curvy nature when interpreted by Models like gam and loess, we are implementing the GAM curve for all the continents in the graph below. And for better representation, we are using different colors to represent different continents.
+
+#plotting graph of Life Expectancy vs GDP per capita with gam models and faceted by continent
+
+```{r}
+ggplot(dfmin1, aes(x = GDP, y = Life_expectancy, color = continent)) +
+  geom_point() + scale_x_log10()+
+  geom_smooth(method = "gam", se = FALSE) +
+  ggtitle("Life Expectancy vs GDP per capita") +
+  xlab("GDP per Capita") +
+  ylab("Life Expectancy") +
+  labs(subtitle = "Life expectancy varying with GDP per capita for each continent using GAM Model",
+       caption = "Data from the World Bank in early 2024",
+       color = "continent") +
+  scale_color_viridis_d() + 
+  facet_wrap(~continent, scales = "free") +
+  theme(axis.title.x.bottom = element_text(size = 13), axis.title.y.left = element_text(size = 13))
+```
+
+#Observations:
+
+Above is the graph showing the relationship between life expectancy and GDP per capita. The graph is divided into 5 sub graphs and each sub graph represents the data for a particular continent. Every Continents' data points are represented with different colors. The GAM function with same colors as data points is fitted on each continent.
+A similar pattern of relationship can be seen for the continents Africa, Americas, Asia, and Europe where the there is no curviness of GAM function is observed meaning that the relationship is fairly linear. This proves that for these continents, life expectancy increases with increase in GDP per capita. 
+Thus, for  continents of Africa, Americas, Asia, and Europe, the relationship can be explained with a simple linear model like LM and no need of complex model like GAM and Loess as all of them provide the same result.
+While for the Continent Oceania, the relationship cannot be explained with a simple linear model, as  it can be seen that GAM function line is not straight like the prior three continents and has a curvy structure, meaning that the relationship is not fairly linear enough.
+Thus, for the continent of Oceania, the complex linear models such as GAM or Loess can be used to show the relationship, rather than the simple lm model.
+
+## Question 2:
+Life expectancy changes from 2019 to 2021: How did life expectancy change from 2019 to 2021? 
+Which countries saw the biggest changes? Does the distribution of changes vary by continent, and if so, how? 
+Is the change in life expectancy related to 2019 life expectancy?
+Does that relationship vary by continent, and if so, how?
+
+# Created data frame
+```{r}
+df <- data.frame(
+  name = World_Bank_life$Country.Name,
+  lifeExp21 = World_Bank_life$X2021,
+  lifeExp20 = World_Bank_life$X2020,
+  lifeExp19 = World_Bank_life$X2019
+)
+```
+
+# Added continents in data frame using left join
+```{r}
+df <- left_join(df, countries_data, by = "name")
+```
+
+# Omitting NA values
+```{r}
+df <- na.omit(df)
+```
+
+# Calculated Life expectancy Change 
+```{r}
+library(ggplot2)
+df$Change <- df$lifeExp21 - df$lifeExp19
+
+#Life expectancy change from 2019 to 2021
+ggplot(df, aes(x = `lifeExp19`, y = Change)) + geom_point() +
+  geom_smooth(method = "gam", se = FALSE)
+
+#Life expectancy change from 2019 to 2021 by Continent
+ggplot(df, aes(x = `lifeExp19`, y = Change)) + geom_point() +
+  scale_x_log10() +
+  geom_smooth(method = "gam", se = FALSE, color = "red") +
+  facet_wrap(~ continent, labeller = label_both) +
+  ggtitle("Life Expectancy Change from 2019 to 2021 by Continent") +
+  xlab("Life Expectancy of 2019") +
+  ylab("Change from 2019 to 2021")
+
+```
+
+# Distribution of change by continent.
+
+```{r}
+df$Change <- df$lifeExp21 - df$lifeExp19
+
+continent_colors <- c("Asia" = "darkcyan", "Europe" = "mediumseagreen", "Africa" = "darkorchid4", "Americas" = "royalblue4", "Oceania" = "yellow2")
+
+#Life expectancy change from 2019 to 2021 by Continent
+ggplot(df, aes(x = Change, fill = continent)) + geom_histogram(bins = 10, binwidth = 0.5) +
+  facet_wrap(~ continent, labeller = label_both) +
+  scale_fill_manual(values = continent_colors) +
+  ggtitle("Life Expectancy Change Distibution from 2019 to 2021 by Continent") +
+  xlab("Life Expectancy Change from 2019") +
+    labs( caption = "Data from the World Bank in early 2024
+          X axis is negative scale") +
+   coord_cartesian(xlim = c(-4.5,1))
+```
+
+As we can observe, every continent has seen decrease in the life expectancy from 2019 to 2021.From this distribution of life expectancy change, it can be seen that Africa, Asia and Oceania has seen the least changes as we can see from the graph, their distribution count is more towards the right i.e. 0. Where as continent like Americas show that there are more countries there which faced more change from 2019 to 2021. Europe on the other hand, has some countries with more change in life expectancy and some countries which are showing less change.
+
+
+# Top 5 countries which saw the biggest changes
+```{r}
+df_life <- data.frame(
+  name = World_Bank_life$Country.Name,
+  lifeExp21 = World_Bank_life$X2021,
+  lifeExp19 = World_Bank_life$X2019
+)
+df_life = na.omit(df_life)
+```
+
+```{r}
+df_life$Change <- abs(df_life$lifeExp21 - df_life$lifeExp19)
+
+top5Countries <- top_n(df_life, 5, Change) %>%
+  arrange(desc(Change))
+
+print(top5Countries)
+```
+
+
+## Observations:
+The above graph shows the Life expectancy changes from Year 2019 to 2021. These changes have been shown according to continents all well.
+
+# Life expectancy changes from 2019 to 2021: How did life expectancy change from 2019 to 2021? 
+For the most of the countries life expectancy decreased from 2019 to 2021 as observed in Graph 1.
+
+# Which countries saw the biggest changes? 
+In above table are the top 5 countries which saw the biggest changes in Life expectancy from 2019 to 2021.
+
+# Does the distribution of changes vary by continent, and if so, how? 
+Except Oceania continent, all the other continents have similar trend for the change in life expectancy.
+
+# Is the change in life expectancy related to 2019 life expectancy?Does that relationship vary by continent, and if so, how?
+As observed in the graph, Africa, Americas, Asia and Oceania have almost straight lines i.e. almost no slope, indicating that there is very weak to no relationship between Change and 2019 life expectancy for these continents. Except for Europe, which is suggesting some countries with higher initial life expectancy tended to experience smaller increases in life expectancy later.
+
+
+## Question 3:
+Relationship between GDP and life expectancy changes: How does the life expectancy
+change from 2019 to 2021 vary with GDP per capita in 2019? Can the trends be well-described
+by a simple model such as a linear model, or is a more complicated model required? Is the
+pattern the same or different for every continent? If some continents are different, which
+ones, and how is the relationship different in those continents?
+
+
+# Calculate the change in life expectancy from 2019 to 2021
+```{r}
+World_Bank_life <- World_Bank_life %>%
+  mutate(Change_Life_Expectancy = X2021 - X2019)
+
+#view(World_Bank_life)
+```
+
+# Merging data sets
+```{r}
+
+df_merged <- data.frame(
+  name = World_Bank_gdp$Country.Name,
+  Change_Life_Expectancy = World_Bank_life$Change_Life_Expectancy,
+  GDP_2019 = World_Bank_gdp$X2019
+)
+
+df_merged <- left_join(df_merged, countries_data, by = "name")
+
+df_merged <- na.omit(df_merged)
+#view(df_merged)
+```
+
+Q1) How does the life expectancy change from 2019 to 2021 vary with GDP per capita in 2019?
+
+# Explore relationship between GDP and life expectancy change by plotting graph
+```{r}
+ggplot(df_merged, aes(x = GDP_2019, y = Change_Life_Expectancy)) +
+  geom_point() +
+  ggtitle("Change in Life Expectancy vs. GDP per Capita") +
+  xlab("GDP per Capita (2019)") + ylab("Change in Life Expectancy (2019 to 2021)") +
+  labs(subtitle = "Life expectancy change from 2019 to 2021 varying with GDP per capita in 2019",
+       caption = "Data from the World Bank in early 2024",
+       theme(axis.title.x.bottom = element_text(13), axis.title.y.left = element_text(13)))
+```
+Observations : The general pattern indicates a decline in the change of life expectancy from 2019 to 2021 with increasing GDP in 2019. While life expectancy in 2021 tends to be lower than in 2019 overall, there are instances where it surpasses 2019 levels, particularly for GDP values ranging from 0 to 25000.
+
+
+
+Q2) Can the trends be well-described by a simple model such as a linear model, or is a more complicated model required?
+
+To understand the trend better we now plot a linear model.
+# Create the plot with scatterplot and linear model to understand the trend
+```{r, warning=FALSE}
+ggplot(df_merged, aes(x = GDP_2019, y = Change_Life_Expectancy)) +
+  geom_point() +
+  geom_smooth(aes(color = "Linear Model", linetype = "Linear Model"),method = "lm") +  
+  ggtitle("Change in Life Expectancy vs. GDP per Capita") + 
+  xlab("GDP per Capita (2019)") + ylab("Change in Life Expectancy (2019 to 2021)") +
+  labs(subtitle = "Life expectancy change from 2019 to 2021 varying with GDP per capita in 2019",
+       caption = "Data from the World Bank in early 2024
+Y axis is negative scale",
+       color = "Linear Model", linetype = "Linear Model")+
+  scale_color_manual(values = c("Linear Model" = "blue")) +
+  scale_linetype_manual(values = c("Linear Model" = "dashed")) +
+       theme(axis.title.x.bottom = element_text(13), axis.title.y.left = element_text(13),
+              legend.key.width = unit(0.75, "cm"))
+```
+While the linear model suggests a general uptrend in life expectancy change as life expectancy in 2021 increases although still being lower in comparison with 2019 levels with increasing GDP per Capita in 2019, the scatterplot reveals substantial dispersion among data points. The complexity of the relationship is apparent, particularly evident in a notable deviation in life expectancy change for GDP values below 25,000 in 2019.
+The linear model has failed to capture most of the peaks, highlighting its limitations in representing the observed trends accurately.
+
+We now try to fit the model with log of GDP values.
+
+# Plotting the log values 
+```{r, warning=FALSE}
+options(scipen = 999)
+
+ggplot(df_merged, aes(x = GDP_2019, y = Change_Life_Expectancy)) +
+  geom_point() + scale_x_log10() + 
+  geom_smooth(aes(color = "Linear Model", linetype = "Linear Model"),method = "lm") +  
+  ggtitle("Change in Life Expectancy vs. GDP per Capita") + 
+  xlab("GDP per Capita (2019)") + ylab("Change in Life Expectancy (2019 to 2021)") +
+  labs(subtitle = "Life expectancy change from 2019 to 2021 varying with GDP per capita in 2019",
+       caption = "Data from the World Bank in early 2024
+X axis is lograthimic scale
+Y axis is negative scale",
+       color = "Linear Model", linetype = "Linear Model")+
+  scale_color_manual(values = c("Linear Model" = "blue")) +
+  scale_linetype_manual(values = c("Linear Model" = "dashed")) +
+       theme(axis.title.x.bottom = element_text(13), axis.title.y.left = element_text(13),
+              legend.key.width = unit(2, "cm"))
+```
+The scatterplot shows significant deviation from the linear model, indicating a poor fit.
+
+Observations :The trend is more complex for linear model to be used to extract information. There are peaks in data points that the model fails to capture. While applying a log scale to the trend yields a more linear appearance, the widespread distribution of data points indicates that a straightforward linear model may not adequately describe the trend. 
+
+
+To address above mentioned issues, we'll explore LOESS and GAM models to determine which better fits the observed trend.
+```{r, warning=FALSE}
+ggplot(df_merged, aes(x = GDP_2019, y = Change_Life_Expectancy)) +
+  geom_point() +
+  geom_smooth(aes(color = "Linear Model", linetype = "Linear Model"), method = "lm", se = FALSE) +  
+  geom_smooth(aes(color = "Loess", linetype = "Loess"), method = "loess", se = FALSE) +
+  geom_smooth(aes(color = "GAM", linetype = "GAM"), method = "gam", se = FALSE) +
+  ggtitle("Change in Life Expectancy vs. GDP per Capita") +
+  xlab("GDP per Capita (2019)") +
+  ylab("Change in Life Expectancy (2019 to 2021)") +
+  labs(subtitle = "Life expectancy change from 2019 to 2021 varying with GDP per capita in 2019",
+       caption = "Data from the World Bank in early 2024
+Y axis is negative scale",
+       color = "Regression Models", linetype = "Regression Models") +
+  scale_color_manual(values = c("Linear Model" = "blue", "Loess" = "orange", "GAM" = "purple")) +
+  scale_linetype_manual(values = c("Linear Model" = "dashed", "Loess" = "solid", "GAM" = "longdash")) +
+  theme(axis.title.x.bottom = element_text(size = 13), axis.title.y.left = element_text(size = 13),
+        legend.key.width = unit(0.75, "cm"))  
+```
+
+# Log_scale model
+```{r, warning=FALSE}
+options(scipen = 999)
+
+ggplot(df_merged, aes(x = GDP_2019, y = Change_Life_Expectancy)) +
+  geom_point() + scale_x_log10() +
+  geom_smooth(aes(color = "Linear Model", linetype = "Linear Model"), method = "lm", se = FALSE) +  
+  geom_smooth(aes(color = "Loess", linetype = "Loess"), method = "loess", se = FALSE) +
+  geom_smooth(aes(color = "GAM", linetype = "GAM"), method = "gam", se = FALSE) +
+  ggtitle("Change in Life Expectancy vs. GDP per Capita") +
+  xlab("GDP per Capita (2019)") +
+  ylab("Change in Life Expectancy (2019 to 2021)") +
+  labs(subtitle = "Life expectancy change from 2019 to 2021 varying with GDP per capita in 2019",
+       caption = "Data from the World Bank in early 2024
+X axis is lograthimic scale
+Y axis is negative scale",
+       color = "Regression Models", linetype = "Regression Models") +
+  scale_color_manual(values = c("Linear Model" = "blue", "Loess" = "orange", "GAM" = "purple")) +
+  scale_linetype_manual(values = c("Linear Model" = "dashed", "Loess" = "solid", "GAM" = "longdash")) +
+  theme(axis.title.x.bottom = element_text(size = 13), axis.title.y.left = element_text(size = 13),
+        legend.key.width = unit(0.75, "cm"))  
+```
+
+Observations: Upon examining the graphs of their log values, it's evident that the LOESS model provides more insightful trend information by accurately capturing the peaks. While the GAM model offers additional information compared to the linear model, and exhibits similarities to the LOESS model, the latter excels particularly in modeling local effects.
+
+Q3) Is the pattern the same or different for every continent?
+
+To asses the trend of change in life expectancy from 2019 to 2021 in relation to GDP per capita of the year 2019(logarithmic scale) across continents, we use the LOESS model and create a color-coded graph where each continent is represented by a distinct color. We utilize the viridis color palette to ensure color blindness-friendly representation.
+```{r}
+options(scipen = 999)
+
+ggplot(df_merged, aes(x = GDP_2019, y = Change_Life_Expectancy, color = continent)) +
+  geom_point() + scale_x_log10() +
+  geom_smooth(method = "loess", se = FALSE, aes(group = continent)) + 
+  ggtitle("Change in Life Expectancy vs. GDP per Capita for each continent") +
+  xlab("GDP per Capita (2019)") +
+  ylab("Change in Life Expectancy (2019 to 2021)") +
+  labs(subtitle = "Life expectancy change from 2019 to 2021 varying with GDP per capita in 2019 for each continent
+using LOESS Model",
+       caption = "Data from the World Bank in early 2024
+X axis is lograthimic scale
+Y axis is negative scale",
+       color = "Continent") +
+  scale_color_viridis_d() + 
+  theme(axis.title.x.bottom = element_text(size = 13), axis.title.y.left = element_text(size = 13))
+```
+
+Q4) If some continents are different, which ones, and how is the relationship different in those continents?
+Observations: Each continent exhibits distinct patterns, indicating localized trends. For a comprehensive understanding, the LOESS model is preferred due to its ability to capture these nuances effectively.
+
+We're utilizing facet wrap based on continent to create separate plots for each continent, allowing for easy comparison of change in life expectancy and GDP per capita trends across different geographical regions. This approach enables clearer visualization and interpretation of continent-specific patterns in the data.
+
+```{r}
+options(scipen = 999)
+
+ggplot(df_merged, aes(x = GDP_2019, y = Change_Life_Expectancy, color = continent)) +
+  geom_point() + scale_x_log10()+
+     geom_smooth(aes(color = "Linear Model", linetype = "Linear Model"), method = "lm", se = FALSE) +  
+  geom_smooth(aes(color = "Loess", linetype = "Loess"), method = "loess", se = FALSE, span = 0.95) +
+  geom_smooth(aes(color = "GAM", linetype = "GAM"), method = "gam", se = FALSE) +
+  ggtitle("Change in Life Expectancy vs. GDP per Capita for each continent") +
+  xlab("GDP per Capita (2019)") +
+  ylab("Change in Life Expectancy (2019 to 2021)") +
+  labs(subtitle = "Life expectancy change from 2019 to 2021 varying with GDP per capita in 2019",
+       caption = "Data from the World Bank in early 2024
+X axis is lograthimic scale
+Y axis is negative scale",
+       color = "Regression Models", linetype = "Regression Models") +
+  scale_color_manual(values = c("Linear Model" = "blue", "Loess" = "orange", "GAM" = "purple")) +
+  scale_linetype_manual(values = c("Linear Model" = "dashed", "Loess" = "solid", "GAM" = "longdash")) +
+  facet_wrap(~continent, scales = "free") +
+  theme(axis.title.x.bottom = element_text(size = 13), axis.title.y.left = element_text(size = 13),
+         legend.key.width = unit(0.75, "cm"))  
+```
+Observation : from the plotted graphs its observed that the pattern is different for every continent. 
+
+-->In the analysis of Africa and Asia, both the GAM and Linear models provide sufficient information, with the Loess model exhibiting a slight curvature. Thus, the Linear model suffices for these continents.
+
+-->In the case of the Americas, although the GAM and Linear models show similar trends, the Loess model offers a better fit and more accurate trend capture, indicating its superiority.
+
+-->However, for Europe, the Linear model fails to adequately capture the trend, suggesting the need for a more sophisticated model. The GAM and Loess curves exhibit overlap, indicating potential suitability for capturing the data trend.
+
+-->Regarding Oceania, while the GAM and Linear models overlap, they do not effectively capture the data trend. In contrast, the Loess model appears to perform better, although the presence of a deep downward curve between GDP 1000 and 30000 suggests a potential outlier influencing the trend.
+-->In the analysis of Africa and Asia, both the GAM and Linear models provide sufficient information, with the Loess model exhibiting a slight curvature. Thus, the Linear model suffices for these continents.
+
+-->In the case of the Americas, although the GAM and Linear models show similar trends, the Loess model offers a better fit and more accurate trend capture, indicating its superiority.
+
+-->However, for Europe, the Linear model fails to adequately capture the trend, suggesting the need for a more sophisticated model. The GAM and Loess curves exhibit overlap, indicating potential suitability for capturing the data trend.
+
+-->Regarding Oceania, while the GAM and Linear models overlap, they do not effectively capture the data trend. In contrast, the Loess model appears to perform better, although the presence of a deep downward curve between GDP 1000 and 30000 suggests a potential outlier influencing the trend.
+
+
+Each continent exhibits distinct patterns, as seen above. For a comprehensive understanding, the LOESS model is used here due to its ability to capture the trends effectively.
+
+```{r}
+options(scipen = 999)
+
+ggplot(df_merged, aes(x = GDP_2019, y = Change_Life_Expectancy, color = continent)) +
+  geom_point() + scale_x_log10()+
+  geom_smooth(method = "loess", se = FALSE) +
+  ggtitle("Change in Life Expectancy vs. GDP per Capita for each continent") +
+  xlab("GDP per Capita (2019)") +
+  ylab("Change in Life Expectancy (2019 to 2021)") +
+  labs(subtitle = "Life expectancy change from 2019 to 2021 varying with GDP per capita in 2019 for each continent using LOESS Model",
+       caption = "Data from the World Bank in early 2024",
+       color = "continent") +
+  scale_color_viridis_d() + 
+  facet_wrap(~continent, scales = "free") +
+  theme(axis.title.x.bottom = element_text(size = 13), axis.title.y.left = element_text(size = 13))
+```
+NOTE : The GDP values mentioned here are all Log scale.
+
+Overall observations comparing the trend of each continent:
+
+--> Africa and Asia demonstrate similar trends, sharing comparable log GDP scales. However, Asia's scale extends further to 100000. Both experience minimal change in life expectancy oscillating between -1 to -2 units, until GDP reaches around 1000, followed by a significant dip of nearly 2 units. For Africa, this difference diminishes as GDP increases up to 30000. However, for Asia, the difference stays constant after then decrease and starts increasing as GDP log value increases from 30000 to 10000.
+--> Americas and Asia also display analogous log GDP scales, beginning around 3000. However, Asia's scale extends further to 100000.  Americas exhibit high peaks and dips. 
+--> Europe presents a unique trend compared to other continents. Life expectancy in 2021 is initially 2 units lower than in 2019, which further increases to 3 units as GDP increases. However, from a GDP of 30000, it begins to improve, eventually matching 2019 levels as GDP rises to 100000.
+-->  While data for Oceania is limited compared to other continents, discernible patterns emerge, characterized by two significant dips and a peak. Notably, unlike other continents, Oceania experiences a unique observation where the life expectancy in 2021 surpasses that of 2019 by approximately 0.4 units. However, a notable drop is observed as GDP increases from 10000 to 30000, although further analysis is required due to a suspected outlier data point.
+
+Further evaluation of pattern in each continent : 
+
+1) Africa : In Africa, the life expectancy in 2021 dips by one unit compared to 2019 levels for GDP values below 1000, However, a decrease in change is observed as GDP rises from 1000 to 3000 after which it remains almost constant. Around a GDP of 3500, there is an increase in the difference, where the life expectancy in 2021 is two units lower than in 2019. Nevertheless, with increasing GDP, the life expectancy in 2021 begins to improve, approaching parity with 2019 levels by a GDP of 30000.
+
+2) Americas : In the Americas, the GDP in 2019 starts at approximately 3000, with a one-unit difference in life expectancy compared to 2019 levels. However, as GDP increases up to 10000, there is a noticeable decline in life expectancy for 2021, reaching three units lower than in 2019. Despite a decrease in difference as life expectancy in 2021 improves as GDP increases to around 35000, with further increase in GDP, the life expectancy in 2021 decreases by almost 1.5 units compared to 2019.
+
+3) Asia : The trend observed in Asia reveals a relatively stable change in life expectancy from 2019 to 2021 compared to other continents, particularly noticeable against GDP per capita of 2019. Although the change in life expectancy diminishes as GDP increases from 3000, it stabilizes and exhibits a slight constant pattern as GDP reaches 30000, after which the life expectancy in 2021 increase and settles at a difference of approximately one unit at a GDP of 100000.
+
+4) Europe : In Europe, the GDP in 2019 commences at approximately 10000, accompanied by a decrease of two units in life expectancy for 2021 compared to 2019 levels. This disparity widens as GDP per capita increases, reaching three units at a GDP of 30000. However, a positive trend emerges thereafter, with a rise in GDP leading to a leveling off of the change in life expectancy by the time GDP reaches 50000. Despite increasing GDP, the life expectancy in 2021 remains nearly equivalent to that of 2019. 
+
+5) Oceania : While data for Oceania is limited compared to other continents, discernible patterns emerge, characterized by two significant dips and a peak. Notably, unlike other continents, Oceania experiences a unique observation where the life expectancy in 2021 surpasses that of 2019 by approximately 0.4 units. However, a notable drop is observed as GDP increases from 10000 to 30000, although further analysis is required due to a suspected outlier data point. Despite witnessing a decline, the life expectancy in 2021 remains either higher or equal to that of 2019 until GDP approaches 10000. 
+
+ 
+##Question 4:
+Modeling: Can we fit an interpretable model (e.g. a linear model, perhaps with simple
+transformations) that explains the change in life expectancy from 2019 to 2021 using:
+• Continent
+• Life expectancy in 2019
+• GDP per capita in 2019
+Are any interactions necessary? What does your model tell you quantitatively? Is there a
+good way of visualizing the model? What countries does your model not fit well?
+
+#Join lifeEXP with countries
+```{r}
+ExpGDPreal1.join <- left_join(countries_data, World_Bank_life, by = c("name" = "Country.Name", "code" = "Country.Code"))
+```
+
+```{r}
+ExpGDPreal1.join <- left_join(ExpGDPreal1.join, World_Bank_gdp, by = c("name" = "Country.Name", "code" = "Country.Code") )
+```
+
+```{r}
+questiondata <- select(ExpGDPreal1.join, name, code, continent, X2019.x, X2020.x,X2021.x, X2019.y, X2020.y, X2021.y)
+```
+
+```{r}
+lifeExp2119 <- questiondata$X2021.x - questiondata$X2019.x
+questiondata$lifeExp2119 <- lifeExp2119
+```
+
+
+
+```{r, warning=FALSE}
+ggplot(questiondata, aes(x = log(X2019.y), y = lifeExp2119)) + geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  facet_wrap(~continent, ncol = 2) + labs(title = "Explaining change in Life Expectancy from 2019 to 2021", x = "log of GDP Per Capita in 2019", y = "Life Expectancy Difference between 2021 and 2019")
+ggplot(questiondata, aes(x = X2019.x, y = lifeExp2119)) + geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  facet_wrap(~continent, ncol = 2) +
+  labs(title = "Explaining change in Life Expectancy from 2019 to 2021", x = "Life Expectancy in 2019", y = "Life Expectancy Difference between 2021 and 2019")
+```
+
+```{r}
+library(mgcv)
+lifeExp.gam <- gam(lifeExp2119 ~ X2019.x + s(X2019.y), data = questiondata, method = "REML")
+lifeExp2.gam <- gam(lifeExp2119 ~ s(X2019.y, X2019.x), data = questiondata, method = "REML")
+lifeExp3.gam <- gam(lifeExp2119 ~ X2019.y + s(X2019.x), data = questiondata, method = "REML")
+#summary(lifeExp.gam)
+#-summary(lifeExp2.gam)
+BIC(lifeExp.gam)
+BIC(lifeExp2.gam)
+BIC(lifeExp3.gam)
+```
+
+```{r, warning=FALSE}
+ggplot(questiondata, aes(x = X2019.y , y = lifeExp2119)) + geom_point() +
+  geom_smooth(method = "gam") +
+  facet_wrap(~continent, ncol = 2)
+ggplot(questiondata, aes(x = X2019.x, y = lifeExp2119)) + geom_point() +
+  geom_smooth(method = "gam") +
+  facet_wrap(~continent, ncol = 2)
+```
+
+```{r, warning=FALSE}
+ggplot(questiondata, aes(x = X2019.y , y = lifeExp2119)) + geom_point() +
+  geom_smooth(method = "loess") +
+  facet_wrap(~continent, ncol = 2) +
+   labs(title = "Explaining the change in Life Expectancy from 2019 to 2021 through Continents and GDP Per Capita in 2019", x = "GDP Per Capita in 2019", y = "Life Expectancy Difference between 2021 and 2019")
+ggplot(questiondata, aes(x = X2019.x, y = lifeExp2119)) + geom_point() +
+  geom_smooth(method = "loess") +
+  facet_wrap(~continent, ncol = 2) + 
+  labs(title = "Explaining the change in Life Expectancy from 2019 to 2021 through Continents and Life Expectancy in 2019", x = "GDP Per Capita in 2019", y = "Life Expectancy Difference between 2021 and 2019")
+```
+
+
+
+
